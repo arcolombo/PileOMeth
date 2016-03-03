@@ -109,7 +109,9 @@ void extractMBias(Config *config, char *opref, int SVG, int txt) {
 
         if(isCpG(seq, pos, seqlen)) {
             if(!config->keepCpG) continue;
-        } else if(isCHG(seq, pos, seqlen)) {
+        } else if(isCpH(seq,pos,seqlen)) {
+            if(!config->keepCpH) continue;
+        }  else if(isCHG(seq, pos, seqlen)) {
             if(!config->keepCHG) continue;
         } else if(isCHH(seq, pos, seqlen)) {
             if(!config->keepCHH) continue;
@@ -153,7 +155,7 @@ void extractMBias(Config *config, char *opref, int SVG, int txt) {
     }
 
     //Report some output
-    if(SVG) makeSVGs(opref, meths, config->keepCpG + 2*config->keepCHG + 4*config->keepCHH);
+    if(SVG) makeSVGs(opref, meths, config->keepCpG + 3*config->keepCpH + 2*config->keepCHG + 4*config->keepCHH);
     if(txt) makeTXT(meths);
 
     //Clean up

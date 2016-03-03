@@ -37,6 +37,7 @@ typedef struct {
 /*! @typedef
  @abstract Global configuration information structure
  @field	keepCpG	1: Output CpG metrics
+ @field keepCpH 1: Output CpH metriks 
  @field keepCHG	1: Output CHG metrics
  @field	keepCHH	1: Output CHH metrics
  @field	minMapq	Minimum MAPQ value to include a read (-q)
@@ -56,7 +57,7 @@ typedef struct {
  @field fai	Fasta file index pointer
 */
 typedef struct {
-    int keepCpG, keepCHG, keepCHH;
+    int keepCpG, keepCpH, keepCHG, keepCHH;
     int minMapq, minPhred, keepDupes, maxDepth, minDepth;
     int keepDiscordant, keepSingleton;
     int merge, methylKit;
@@ -126,7 +127,7 @@ int cust_mplp_auto(bam_mplp_t iter, int *_tid, int *_pos, int *n_plp, const bam_
  @abstract Create the actual SVG files that the user can view
  @param opref	The output filename prefix (files will be opref_OT.svg and so on).
  @param meths	The struct holding the methylation metrics for each of the 4 strands. If a strand is not present, it's length (->l) should be 0
- @param which   Denotes which types of Cytosines were used to generate the methylation metric. Bit 0: CpG, bit 1: CHG, bit 2: CHH (these can be combined)
+ @param which   Denotes which types of Cytosines were used to generate the methylation metric. Bit 0: CpG, bit 1: CHG, bit 2: CHH, bit 3: CpH (these can be combined)
 */
 void makeSVGs(char *opref, strandMeth **meths, int which);
 
@@ -138,7 +139,7 @@ void makeTXT(strandMeth **meths);
 
 //common.c
 /*! @function
- @abstract Return 1 if the base is part of a CpG/CHG/CHH
+ @abstract Return 1 if the base is part of a CpG/CHG/CHH/CpH
  @param seq	The genomic sequence
  @param pos	The index within the sequence
  @param seqlen	The length of the sequence
@@ -146,7 +147,7 @@ void makeTXT(strandMeth **meths);
 int isCpG(char *seq, int pos, int seqlen);
 int isCHG(char *seq, int pos, int seqlen);
 int isCHH(char *seq, int pos, int seqlen);
-
+int isCpH(char *seq, int pos, int seqlen);
 /*! @function
  @abstract Determine what strand an alignment originated from
  @param b	The alignment in question.

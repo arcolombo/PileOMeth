@@ -295,6 +295,7 @@ void getThresholds(strandMeth *m, int which, int *lthresh, int *rthresh) {
 // bit 0: CpG
 // bit 1: CHG
 // bit 2: CHH
+// bit 3: CpH
 void makeSVGs(char *opref, strandMeth **meths, int which) {
     double minY = 1.0, maxY = 0.0;
     int minX1 = -1, minX2 = -1, maxX = 0, hasRead1 = 0, hasRead2 = 0;
@@ -342,15 +343,22 @@ void makeSVGs(char *opref, strandMeth **meths, int which) {
                 fprintf(of, "CpG");
             }
             if(which&2) {
-                if(doingLabel) fprintf(of, "/CHG");
+               if(doingLabel) fprintf(of, "/CHG");
                 else fprintf(of, "CHG");
                 doingLabel = 1;
+            }
+            if(which&3) {
+              if(doingLabel) fprintf(of, "/CpH");
+              else fprintf(of, "CpH");
+              doingLabel = 1;
             }
             if(which&4) {
                 if(doingLabel) fprintf(of, "/CHH");
                 else fprintf(of, "CHH");
                 doingLabel = 1;
             }
+
+
             if(doingLabel) fprintf(of, " ");
             fprintf(of, "Methylation %%</text>\n");
             fprintf(of,"<text x=\"%i\" y=\"%i\" text-anchor=\"middle\">Position along mapped read (5'->3' of + strand)</text>\n", buffer+(dim>>1), buffer+dim+40);
