@@ -102,6 +102,7 @@ void extractCalls(Config *config) {
     mplp_data *data = NULL;
     struct lastCall *lastCpG = NULL;
     struct lastCall *lastCHG = NULL;
+    struct lastCall *lastCpH = NULL;
 
     if(config->merge) {
         if(config->keepCpG) {
@@ -114,6 +115,12 @@ void extractCalls(Config *config) {
             assert(lastCHG);
             lastCHG->tid = -1;
         }
+        if(config->keepCpH) {
+           lastCpH = calloc(1, sizeof(struct lastCall));
+           assert(lastCpH);
+            lastCpH->tid = -1;
+        }
+
     }
 
     data = calloc(1,sizeof(mplp_data));
@@ -170,6 +177,9 @@ void extractCalls(Config *config) {
         if(isCpG(seq, pos, seqlen)) {
             if(!config->keepCpG) continue;
             type = 0;
+        } else if(isCpH(seq,pos,seqlen)){
+            if(!config->keepCpH) continue;
+             type = 3;
         } else if(isCHG(seq, pos, seqlen)) {
             if(!config->keepCHG) continue;
             type = 1;
@@ -205,7 +215,12 @@ void extractCalls(Config *config) {
             if(type==0) {
                 if(base=='G' || base=='g') pos--;
                 processLast(config->output_fp[0], config, lastCpG, hdr, tid, pos, 2, nmethyl, nunmethyl, base);
-            } else {
+            } 
+            //  if(type==3) { //CpH
+              //  if(base=='G' || base=='g') pos--; //position adjusted for di-nucleotide context
+              //  processLast(config->output_fp[3], config, lastCpH, hdr, tid, pos, 2, nmethyl, nunmethyl, base);   //FIX ME:: not sure the output_fp config struct this may not be needed because CpH is not ending with G.   could delete!
+           // }  
+                else {
                 if(base=='G' || base=='g') pos-=2;
                 processLast(config->output_fp[1], config, lastCHG, hdr, tid, pos, 3, nmethyl, nunmethyl, base);
             }
@@ -216,6 +231,9 @@ void extractCalls(Config *config) {
     if(config->merge) {
         if(config->keepCpG && lastCpG->tid != -1) {
             processLast(config->output_fp[0], config, lastCpG, hdr, tid, pos, 2, nmethyl, nunmethyl, base);
+        }
+          if(config->keepCpH && lastCpH->tid != -1) {  //don't know if this is correct
+            processLast(config->output_fp[0], config, lastCpH, hdr, tid, pos, 2, nmethyl, nunmethyl, base);
         }
         if(config->keepCHG && lastCHG->tid != -1) {
             processLast(config->output_fp[1], config, lastCHG, hdr, tid, pos, 3, nmethyl, nunmethyl, base);
@@ -307,6 +325,7 @@ void extract_usage() {
 " --noCpG          Do not output CpG context methylation metrics\n"
 " --CHG            Output CHG context methylation metrics\n"
 " --CHH            Output CHH context methylation metrics\n"
+" --CpH            Output CpH context methylation metrics\n"
 " --fraction       Extract fractional methylation (only) at each position. This\n"
 "                  produces a file with a .meth.bedGraph extension.\n"
 " --counts         Extract base counts (only) at each position. This produces a\n"
@@ -341,7 +360,7 @@ int extract_main(int argc, char *argv[]) {
     Config config;
 
     //Defaults
-    config.keepCpG = 1; config.keepCHG = 0; config.keepCHH = 0;
+    config.keepCpG = 1; config.keepCHG = 0; config.keepCHH = 0; config.keepCpH=0;
     config.minMapq = 10; config.minPhred = 5; config.keepDupes = 0;
     config.keepSingleton = 0, config.keepDiscordant = 0;
     config.minDepth = 1;
@@ -379,6 +398,7 @@ int extract_main(int argc, char *argv[]) {
         {"methylKit",    0, NULL,  12},
         {"help",         0, NULL, 'h'},
         {"version",      0, NULL, 'v'},
+        {"CpH",          0, NULL,  13},
         {0,              0, NULL,   0}
     };
     while((c = getopt_long(argc, argv, "hvq:p:r:l:o:D:f:c:m:", lopts,NULL)) >=0){
@@ -444,6 +464,9 @@ int extract_main(int argc, char *argv[]) {
         case 12 :
             config.methylKit = 1;
             break;
+        case 13 :
+            config.keepCpH = 1;
+            break;
         case 'q' :
             config.minMapq = atoi(optarg);
             break;
@@ -504,7 +527,7 @@ int extract_main(int argc, char *argv[]) {
     }
 
     //Is there still a metric to output?
-    if(!(config.keepCpG + config.keepCHG + config.keepCHH)) {
+    if(!(config.keepCpG + config.keepCHG + config.keepCHH + config.keepCpH)) {
         fprintf(stderr, "You haven't specified any metrics to output!\nEither don't use the --noCpG option or specify --CHG and/or --CHH.\n");
         return -1;
     }
@@ -623,6 +646,36 @@ int extract_main(int argc, char *argv[]) {
         }
     }
 
+
+   if(config.keepCpH) {
+        if(config.fraction) {
+            sprintf(oname, "%s_CpH.meth.bedGraph", opref);
+        } else if(config.counts) {
+            sprintf(oname, "%s_CpH.counts.bedGraph", opref);
+        } else if(config.logit) {
+            sprintf(oname, "%s_CpH.logit.bedGraph", opref);
+        } else if(config.methylKit) {
+            sprintf(oname, "%s_CpH.methylKit", opref);
+        } else {
+            sprintf(oname, "%s_CpH.bedGraph", opref);
+        }
+        config.output_fp[3] = fopen(oname, "w");
+        if(config.output_fp[3] == NULL) {
+            fprintf(stderr, "Dave, I'm afraid I couldn't open the output CpH metrics file for writing. Insufficient permissions?\n");
+            return -3;
+        }
+        if(config.methylKit) {
+            fprintf(config.output_fp[3], "chrBase\tchr\tbase\tstrand\tcoverage\tfreqC\tfreqT\n");
+        } else {
+            printHeader(config.output_fp[3], "CpH", opref, config);
+        }
+    }
+
+
+
+
+
+
     //Run the pileup
     extractCalls(&config);
 
@@ -632,6 +685,7 @@ int extract_main(int argc, char *argv[]) {
     if(config.keepCpG) fclose(config.output_fp[0]);
     if(config.keepCHG) fclose(config.output_fp[1]);
     if(config.keepCHH) fclose(config.output_fp[2]);
+    if(config.keepCpH) fclose(config.output_fp[3]);
     hts_idx_destroy(config.bai);
     free(opref);
     if(config.reg) free(config.reg);
